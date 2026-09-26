@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Declarative Shadow DOM 演示</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 880px; margin: 0 auto; padding: 24px; color: #111827; }
+  h1 { font-size: 1.4rem; }
+  section { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin: 16px 0; }
+  /* 样式隔离验证：全局规则试图污染组件内部，应被 Shadow 边界阻挡 */
+  .card-title { color: red !important; }
+  .panel-label { color: red !important; }
+  #env-report { font-family: ui-monospace, monospace; font-size: 0.85rem; background: #f3f4f6; padding: 8px; border-radius: 6px; }
+  #event-log { max-height: 220px; overflow: auto; font-family: ui-monospace, monospace; font-size: 0.8rem; background: #111827; color: #d1d5db; padding: 10px; border-radius: 6px; }
+  .log-ok { color: #34d399; }
+  .log-warn { color: #fbbf24; }
+  .log-error { color: #f87171; }
+  .dsd-error-notice { border: 1px solid #ef4444; background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin: 8px 0; }
+  button.toolbar { margin-right: 8px; padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Declarative Shadow DOM：预渲染模板 + 客户端激活 + 降级</h1>
+<div id="env-report">检测中…</div>
+
+<section>
+  <h2>1. 原生 DSD（嵌套 Shadow DOM + 插槽 + 水合）</h2>
+  <!-- 服务端预渲染：外层 panel 的 shadow 模板内嵌套 card 的 shadow 模板 -->
+  <demo-panel id="panel-1">
+    <template shadowrootmode="open">
+      <style>
+        :host { display: block; background: #eef2ff; border-radius: 10px; padding: 16px; }
+        .panel-label { color: #312e81; text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.08em; }
+      </style>
+      <div class="panel-label"><slot name="label">面板</slot></div>
+      <demo-card id="nested-card" data-hydration='{"count":0}'>
+        <template shadowrootmode="open">
+          <style>
+            :host { display: block; border: 2px solid #4f46e5; border-radius: 8px; padding: 12px; margin: 8px 0; }
+            .card-title { color: #4f46e5; font-weight: bold; }
+          </style>
+          <div class="card-title"><slot name="header">默认标题</slot></div>
+          <div class="card-body"><slot></slot></div>
+          <button type="button">+1</button>
+          <span class="count">0</span>
+        </template>
+        <span slot="header">嵌套卡片</span>
+        <p>嵌套在外层 Shadow DOM 中的卡片。</p>
+      </demo-card>
+      <slot></slot>
+    </template>
+    <span slot="label">嵌套面板</span>
+    <p>面板默认插槽内容。</p>
+  </demo-panel>
+</section>
+
+<section>
+  <h2>2. 独立卡片（水合状态恢复，count 持久化到 IndexedDB）</h2>
+  <demo-card id="card-1" data-hydration='{"count":3}'>
+    <template shadowrootmode="open">
+      <style>
+        :host { display: block; border: 2px solid #4f46e5; border-radius: 8px; padding: 12px; margin: 8px 0; }
+        .card-title { color: #4f46e5; font-weight: bold; }
+        .card-body { color: #111827; }
+        .card-footer { font-size: 0.85em; color: #6b7280; }
+        button { background: #4f46e5; color: #fff; border: 0; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+        .count { font-variant-numeric: tabular-nums; }
+      </style>
+      <div class="card-title"><slot name="header">默认标题</slot></div>
+      <div class="card-body"><slot></slot></div>
+      <div class="card-footer"><slot name="footer"></slot></div>
+      <button type="button" part="counter">+1</button>
+      <span class="count">0</span>
+    </template>
+    <span slot="header">服务端渲染的标题</span>
+    <p>点击 +1 后刷新页面，计数从 IndexedDB 恢复。</p>
+    <span slot="footer">footer 插槽内容</span>
+  </demo-card>
+</section>
+
+<section>
+  <h2>3. 插槽错位自动修复</h2>
+  <!-- light DOM 请求了模板中不存在的插槽 "sidebar"，激活器会警告并降级到默认插槽 -->
+  <demo-card id="card-misaligned" data-hydration='{"count":0}'>
+    <template shadowrootmode="open">
+      <style>:host{display:block;border:2px solid #d97706;border-radius:8px;padding:12px;margin:8px 0}
+      .card-title{color:#d97706;font-weight:bold}</style>
+      <div class="card-title"><slot name="header"></slot></div>
+      <slot></slot>
+    </template>
+    <span slot="header">错位修复演示</span>
+    <p slot="sidebar">这段内容请求了不存在的 sidebar 插槽，会被重路由到默认插槽。</p>
+  </demo-card>
+</section>
+
+<section>
+  <h2>4. 解析失败提示</h2>
+  <!-- shadowrootmode 非法，激活器应显示错误提示而不崩溃 -->
+  <div id="broken-host">
+    <template shadowrootmode="broken">
+      <p>永远不会显示的内容</p>
+    </template>
+  </div>
+</section>
+
+<section>
+  <h2>5. 操作台</h2>
+  <button class="toolbar" id="inject-dynamic">动态注入 DSD 并激活</button>
+  <button class="toolbar" id="reactivate">重复激活（幂等测试）</button>
+  <button class="toolbar" id="reset-hydration">清除水合状态</button>
+  <div id="dynamic-zone"></div>
+</section>
+
+<section>
+  <h2>事件日志</h2>
+  <div id="event-log"></div>
+</section>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

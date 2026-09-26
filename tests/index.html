@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DSD 验收测试</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 880px; margin: 0 auto; padding: 24px; }
+  #results li { list-style: none; padding: 2px 0; }
+  .pass { color: #059669; }
+  .fail { color: #dc2626; }
+  #env { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #6b7280; }
+</style>
+</head>
+<body>
+<h1>Declarative Shadow DOM 验收测试</h1>
+<p id="summary">运行中…</p>
+<p id="env"></p>
+<ul id="results"></ul>
+
+<!-- 静态 DSD 标记：用于“降级方案结果一致”测试。
+     支持 DSD 的浏览器在解析期原生激活；不支持时由测试中的 activateShadowRoots 兜底。 -->
+<demo-card id="consistency-native" data-hydration='{"count":0}'>
+  <template shadowrootmode="open">
+    <style>
+  :host { display: block; border: 2px solid #4f46e5; border-radius: 8px; padding: 12px; margin: 8px 0; }
+  .card-title { color: #4f46e5; font-weight: bold; }
+  .card-body { color: #111827; }
+  .card-footer { font-size: 0.85em; color: #6b7280; }
+  button { background: #4f46e5; color: #fff; border: 0; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+  .count { font-variant-numeric: tabular-nums; }
+</style>
+<div class="card-title"><slot name="header">默认标题</slot></div>
+<div class="card-body"><slot></slot></div>
+<div class="card-footer"><slot name="footer"></slot></div>
+<button type="button" part="counter">+1</button>
+<span class="count">0</span>
+  </template>
+</demo-card>
+
+<script type="module" src="./browser-tests.js"></script>
+</body>
+</html>
