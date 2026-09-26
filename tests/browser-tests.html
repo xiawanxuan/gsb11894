@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>DSD 验收测试</title>
+<style>
+  body { background: #0f0d1a; color: #e8e4ff; font-family: system-ui, sans-serif; padding: 1.5rem; }
+  .pass { color: #7ee787; } .fail { color: #ff7b72; } .pending { color: #ffd166; }
+  #results div { padding: 2px 0; border-bottom: 1px solid #241f3d; font-size: 0.9rem; }
+  #summary { font-size: 1.1rem; margin: 1rem 0; }
+</style>
+</head>
+<body>
+<h1>Declarative Shadow DOM 验收测试</h1>
+<div id="summary" class="pending">运行中…</div>
+<div id="results"></div>
+<div id="sandbox" style="position:absolute;left:-9999px;top:-9999px"></div>
+<script type="module" src="./browser-tests.js"></script>
+</body>
+</html>

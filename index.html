@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Declarative Shadow DOM 演示</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 2rem; background: #0f0d1a; color: #e8e4ff;
+    font-family: system-ui, sans-serif; line-height: 1.6; }
+  h1 { font-size: 1.4rem; } h2 { font-size: 1.05rem; margin-top: 2rem; }
+  .panel { border: 1px solid #3a3555; border-radius: 12px; padding: 1rem;
+    margin-bottom: 1rem; background: #171425; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+  .ok { color: #7ee787; } .warn { color: #ffd166; } .err { color: #ff7b72; }
+  button { background: #7c6cff; color: #fff; border: none; border-radius: 6px;
+    padding: 0.45rem 0.9rem; cursor: pointer; margin-right: 0.5rem; }
+  button:hover { background: #9185ff; }
+  #event-log { max-height: 220px; overflow: auto; font-family: ui-monospace, monospace;
+    font-size: 0.8rem; background: #0b0916; border-radius: 8px; padding: 0.75rem; }
+  #event-log div { border-bottom: 1px solid #241f3d; padding: 2px 0; }
+  .highlight { color: #ff7b72; } /* 页面级同名类：用于验证样式隔离（shadow 内应为金黄而非红） */
+  code { background: #241f3d; padding: 0 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Declarative Shadow DOM：预渲染 · 激活 · 水合</h1>
+
+<div class="panel" id="status-panel">
+  <h2>环境检测</h2>
+  <div id="support-status">检测中…</div>
+</div>
+
+<div class="grid">
+  <!-- 1. 预渲染 DSD：浏览器支持时解析器直接消费模板；不支持时由 polyfill 激活 -->
+  <demo-card id="prerendered-card">
+    <template shadowrootmode="open">
+      <style>
+        :host { display: block; }
+        .card { border: 1px solid #3a3555; border-radius: 12px; overflow: hidden;
+          background: #171425; color: #e8e4ff; font-family: system-ui, sans-serif; }
+        .card-header { padding: 0.75rem 1rem; background: #241f3d; font-weight: 600; }
+        .card-body { padding: 1rem; }
+        .card-footer { padding: 0.5rem 1rem; border-top: 1px solid #3a3555;
+          font-size: 0.85rem; color: #9a92c8; }
+        .highlight { color: #ffd166; }
+      </style>
+      <div class="card">
+        <div class="card-header"><slot name="header">默认标题</slot></div>
+        <div class="card-body">
+          <slot>默认正文</slot>
+          <p class="highlight">此行样式被 Shadow DOM 隔离（.highlight 为金黄色）。</p>
+          <demo-counter state-id="card-inner-counter">
+            <template shadowrootmode="open">
+              <style>
+                :host { display: inline-block; }
+                .counter { display: inline-flex; align-items: center; gap: 0.5rem;
+                  padding: 0.4rem 0.8rem; border: 1px solid #7c6cff; border-radius: 8px;
+                  background: #1e1b2e; color: #cfc8ff; font-family: system-ui, sans-serif; }
+                button { background: #7c6cff; color: #fff; border: none; border-radius: 6px;
+                  width: 1.6rem; height: 1.6rem; cursor: pointer; font-size: 1rem; }
+                .count { min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; }
+              </style>
+              <div class="counter">
+                <slot name="label">计数器</slot>
+                <button type="button" data-dec>-</button>
+                <span class="count">0</span>
+                <button type="button" data-inc>+</button>
+              </div>
+            </template>
+            <span slot="label">嵌套计数</span>
+          </demo-counter>
+        </div>
+        <div class="card-footer"><slot name="footer">默认页脚</slot></div>
+      </div>
+    </template>
+    <span slot="header">预渲染卡片（DSD / polyfill）</span>
+    <span>正文由默认插槽分发。点击下方嵌套计数器，事件会冒泡穿过两层 Shadow DOM。</span>
+    <span slot="footer">页脚插槽 · 嵌套 Shadow DOM 演示</span>
+  </demo-card>
+
+  <!-- 2. 无模板：组件走 JS 创建 Shadow DOM 的降级渲染，结构应与 DSD 一致 -->
+  <demo-card id="fallback-card">
+    <span slot="header">降级渲染卡片（JS 创建 Shadow DOM）</span>
+    <span>此卡片没有预渲染模板，由组件 connectedCallback 用 JS 渲染相同结构。</span>
+    <span slot="footer">降级方案结果一致性演示</span>
+  </demo-card>
+</div>
+
+<div class="panel">
+  <h2>带水合状态的独立计数器（IndexedDB 持久化）</h2>
+  <demo-counter state-id="main-counter">
+    <span slot="label">主计数器</span>
+    <script type="application/json" data-hydration>
+      {"version":1,"checksum":"3afe9d1b","data":{"count":3},"savedAt":1}
+    </script>
+  </demo-counter>
+  <p>
+    <button id="btn-reactivate">重新激活（重复激活测试）</button>
+    <button id="btn-clear-store">清除 IndexedDB 状态</button>
+    <button id="btn-corrupt">写入损坏状态（水合不一致测试）</button>
+    <button id="btn-insert-dynamic">动态插入模板（polyfill 激活）</button>
+    <button id="btn-insert-broken">插入损坏模板（解析失败提示）</button>
+  </p>
+  <div id="dynamic-zone"></div>
+</div>
+
+<div class="panel">
+  <h2>模板分析（Web Worker）与事件日志</h2>
+  <div id="analysis-log"></div>
+  <div id="event-log"></div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

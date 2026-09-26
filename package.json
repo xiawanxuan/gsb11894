@@ -1,0 +1,11 @@
+{
+  "name": "dsd-hydration-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Declarative Shadow DOM 预渲染、激活、降级与水合演示",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node --test tests/node-tests.mjs"
+  }
+}
